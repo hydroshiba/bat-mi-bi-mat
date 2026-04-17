@@ -1,0 +1,134 @@
+body {
+    font-family: monospace;
+    background-color: #ffffff;
+    color: #000000;
+    margin: 40px auto;
+    max-width: 800px;
+    padding: 0 20px;
+}
+h1 {
+    font-size: 24px;
+    font-weight: bold;
+}
+h2 {
+    font-size: 16px;
+    font-weight: normal;
+}
+textarea {
+    width: 100%;
+    height: 80px;
+    font-family: monospace;
+    font-size: 16px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    margin-bottom: 20px;
+    resize: vertical;
+}
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-family: monospace;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 30px;
+}
+button:hover {
+    background-color: #333;
+}
+button:disabled {
+    background-color: #999;
+    cursor: wait;
+}
+.result-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-right: 120px; /* Leave space for the button */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+.cipher-text {
+    font-size: 1.5em; /* Size of a standard h2 */
+    font-weight: bold;
+    margin: 0;
+    padding: 0;
+}
+.label {
+    font-weight: bold;
+    color: #aaa;
+    font-size: 12px;
+    margin: 4px 0 0 0;
+    padding: 0;
+}
+.solution-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 6px 12px;
+    font-size: 12px;
+    margin: 0;
+}
+.solution-btn:hover {
+    background-color: #ddd;
+}
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-window {
+    background: #fff;
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.modal-close {
+    margin-top: 15px;
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 14px;
+}
+.modal-close:hover {
+    background: #333;
+}
+.sol-code {
+    white-space: pre;
+    overflow-x: auto;
+    background: #f9f9f9;
+    font-size: 14px;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-left: 3px solid #ccc;
+    font-family: monospace;
+}
+.sol-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 5px;
+}

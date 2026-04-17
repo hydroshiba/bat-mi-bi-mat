@@ -1,0 +1,6 @@
+torch
+transformers
+requests
+beautifulsoup4
+datasets
+unidecode

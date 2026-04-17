@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Bật mí bí mật!</h1>
+    <h2>Giải mật thư cùng Phan Hải Minh!</h2>
+    
+    <textarea id="inputText" placeholder="Nhập mật thư"></textarea>
+    <br>
+    <button id="solveBtn">Đang load, đợi tui xíu...</button>
+
+    <div id="output"></div>
+
+    <div id="solutionModal" class="modal-overlay">
+        <div class="modal-window">
+            <div id="modalContent"></div>
+            <button class="modal-close" id="closeModalBtn">Đóng</button>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
