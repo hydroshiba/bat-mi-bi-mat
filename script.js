@@ -90,35 +90,53 @@ function vowelPercentage(text) {
     return text.length > 0 ? count / text.length : 0;
 }
 
-async function scoreCandidate(text) {
-    if (!rankerParams || !quadgramProbs) return 0;
-
-    const qLoss = quadgramLoss(text);
-    const vPerc = vowelPercentage(text);
-    
-    let tokenCount = 0;
-    if (tokenizer) {
-        const encoding = await tokenizer(text);
-        tokenCount = encoding.input_ids.data.length;
+async function scoreCandidatesBatch(candidates) {
+    if (!rankerParams || !quadgramProbs) {
+        candidates.forEach(c => c.score = 0);
+        return;
     }
-    
+
+    const texts = candidates.map(c => c.text);
+    const qLosses = texts.map(t => quadgramLoss(t));
+    const vPercs = texts.map(t => vowelPercentage(t));
+    let tokenCounts = new Array(candidates.length).fill(0);
+
+    if (tokenizer) {
+        // Tokenizing 52 strings one by one using Promise.all was causing issues.
+        // Let's tokenize them efficiently but safely.
+        try {
+            for (let i = 0; i < candidates.length; i++) {
+                const encoding = await tokenizer(texts[i]);
+                tokenCounts[i] = encoding.input_ids.data.length;
+            }
+        } catch (e) {
+            console.error("Tokenizer error:", e);
+        }
+    }
+
     const { weights, bias, feature_means, feature_stds } = rankerParams;
-    const normQLoss = (qLoss - feature_means[0]) / (feature_stds[0] + 1e-8);
-    const normVPerc = (vPerc - feature_means[1]) / (feature_stds[1] + 1e-8);
-    const normTokenCount = (tokenCount - feature_means[2]) / (feature_stds[2] + 1e-8);
-    
-    const Z = (weights[0] * normQLoss) + 
-              (weights[1] * normVPerc) + 
-              (weights[2] * normTokenCount) + 
-              bias;
-    
-    return 1 / (1 + Math.exp(-Z));
+
+    for (let i = 0; i < candidates.length; i++) {
+        const normQLoss = (qLosses[i] - feature_means[0]) / (feature_stds[0] + 1e-8);
+        const normVPerc = (vPercs[i] - feature_means[1]) / (feature_stds[1] + 1e-8);
+        const normTokenCount = (tokenCounts[i] - feature_means[2]) / (feature_stds[2] + 1e-8);
+        
+        const Z = (weights[0] * normQLoss) + 
+                  (weights[1] * normVPerc) + 
+                  (weights[2] * normTokenCount) + 
+                  bias;
+        
+        candidates[i].score = 1 / (1 + Math.exp(-Z));
+    }
 }
 
 async function generateCiphers() {
     let text = document.getElementById("inputText").value;
     const outputDiv = document.getElementById("output");
     outputDiv.innerHTML = "<p>Processing & Ranking...</p>";
+
+    // Give the browser a moment to actually render the "Processing" text before we lock the thread
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     if (!text.trim()) {
         outputDiv.innerHTML = "<p>Please enter some text.</p>";
@@ -130,20 +148,49 @@ async function generateCiphers() {
     let candidates = [];
     const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-    // Caesar
     for (let shift = 0; shift < 26; shift++) {
         let shiftedText = caesarCipher(text, shift);
-        candidates.push({ text: shiftedText, label: `Caesar Shift ${shift}`, mappedAlpha: caesarCipher(alphabet, shift) });
-    }
+        let mappedAlpha = caesarCipher(alphabet, shift);
+        
+        // 1. Caesar only
+        candidates.push({ 
+            text: shiftedText, 
+            steps: [
+                {
+                    label: `Bước 1: Dịch bảng chữ cái sang ${shift} vị trí`,
+                    alphaBefore: alphabet,
+                    alphaAfter: mappedAlpha,
+                    textBefore: text,
+                    textAfter: shiftedText
+                }
+            ]
+        });
 
-    // Atbash
-    let atbashText = atbashCipher(text);
-    candidates.push({ text: atbashText, label: "Atbash", mappedAlpha: atbashCipher(alphabet) });
-    
-    // Score
-    for (let c of candidates) {
-        c.score = await scoreCandidate(c.text);
+        // 2. Caesar + Atbash combined
+        let combinedText = atbashCipher(shiftedText);
+        candidates.push({ 
+            text: combinedText, 
+            steps: [
+                {
+                    label: `Bước 1: Dịch bảng chữ cái sang ${shift} vị trí`,
+                    alphaBefore: alphabet,
+                    alphaAfter: mappedAlpha,
+                    textBefore: text,
+                    textAfter: shiftedText
+                },
+                {
+                    label: "Bước 2: Đảo ngược bảng chữ cái",
+                    alphaBefore: alphabet,
+                    alphaAfter: atbashCipher(alphabet),
+                    textBefore: shiftedText,
+                    textAfter: combinedText
+                }
+            ]
+        });
     }
+    
+    // Score all candidates securely in a single batch
+    await scoreCandidatesBatch(candidates);
     
     // Rank descending
     candidates.sort((a, b) => b.score - a.score);
@@ -166,9 +213,6 @@ async function generateCiphers() {
         
         const percentageText = (c.score * 100).toFixed(3);
 
-        const alphaC = alphabet.split('').join(' ');
-        const alphaP = c.mappedAlpha.split('').join(' ');
-
         resultsHTML += `<div class="result-item"><div class="cipher-text">${c.text}</div><div class="label" style="color: ${color};">#${i + 1} - Độ tự tin: ${percentageText}%</div><button class="solution-btn" data-idx="${i}">Xem cách giải</button></div>`;
     }
 
@@ -187,15 +231,21 @@ async function generateCiphers() {
         btn.addEventListener('click', (e) => {
             const idx = parseInt(e.target.getAttribute('data-idx'));
             const c = candidates[idx];
-            const alphaC = alphabet.split('').join(' ');
-            const alphaP = c.mappedAlpha.split('').join(' ');
             
-            modalContent.innerHTML = `
-                <div class="sol-label">Bảng chữ cái (${c.label}):</div>
-                <div class="sol-code">${alphaC}\n${alphaP}</div>
+            let html = "";
+            for (let step of c.steps) {
+                const alphaBefore = step.alphaBefore.split('').join(' ');
+                const alphaAfter = step.alphaAfter.split('').join(' ');
+                html += `
+                <div class="sol-label">${step.label}:</div>
+                <div class="sol-code">${alphaBefore}\n${alphaAfter}</div>
                 <div class="sol-label">Áp dụng lên mật thư:</div>
-                <div class="sol-code">${text}\n${c.text}</div>
-            `;
+                <div class="sol-code">${step.textBefore}\n${step.textAfter}</div>
+                <br>
+                `;
+            }
+            
+            modalContent.innerHTML = html;
             modal.classList.add('active');
         });
     });
